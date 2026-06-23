@@ -1,0 +1,8 @@
+{
+  "name": "CampusEcho",
+  "description": "Smart Campus Companion for university students, lecturers, and administrators providing timetables, AI EchoBot, maps, and academic notifications.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
