@@ -1,0 +1,6 @@
+{
+  "name": "CampusEcho",
+  "description": "CampusEcho – Your Campus, Connected. Smart Campus Companion portal for Meru University of Science and Technology (MUST), Kenya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
