@@ -50,7 +50,7 @@ export function CampusDataProvider({ children }) {
     loadLocal('prefs', {
       inAppEnabled: true,
       emailEnabled: true,
-      smsEnabled: false,
+      emailDigestMode: 'instant',
       remindMinutesBefore: 30,
       venueChanges: true,
       academicUpdates: true,
@@ -68,7 +68,57 @@ export function CampusDataProvider({ children }) {
       },
     ])
   );
+  const [siteConfig, setSiteConfig] = useState({
+    portalName: 'CampusEcho',
+    academicTerm: '2026/2027 Semester 1',
+    supportEmail: 'support@campusecho.must.ac.ke',
+    bannerEnabled: false,
+    bannerText: '',
+    bannerTone: 'info',
+    maintenanceMode: false,
+    maintenanceMessage: 'CampusEcho is undergoing scheduled maintenance. Please check back shortly.',
+  });
   const [dataLoading, setDataLoading] = useState(false);
+
+  async function refreshSiteState() {
+    try {
+      const res = await fetch('/api/site-state');
+      if (!res.ok) return null;
+      const state = await res.json();
+      if (state.siteConfig) setSiteConfig(state.siteConfig);
+      if (Array.isArray(state.buildings)) setBuildings(state.buildings);
+      if (Array.isArray(state.venues)) setVenues(state.venues);
+      if (Array.isArray(state.timetableSlots)) setTimetableSlots(state.timetableSlots);
+      if (Array.isArray(state.announcements)) setAnnouncements(state.announcements);
+      if (Array.isArray(state.news)) setNews(state.news);
+      if (Array.isArray(state.services)) setServices(state.services);
+      if (Array.isArray(state.broadcasts) && state.broadcasts.length > 0) {
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const fresh = state.broadcasts
+            .filter((b) => !existingIds.has(b.id))
+            .map((b) => ({
+              id: b.id,
+              title: b.title,
+              message: b.message,
+              category: b.category || 'announcement',
+              oldVenue: null,
+              newVenue: null,
+              isRead: false,
+              createdAt: b.createdAt,
+            }));
+          return fresh.length > 0 ? [...fresh, ...prev] : prev;
+        });
+      }
+      return state;
+    } catch {
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    refreshSiteState();
+  }, []);
 
   // Sync from Supabase when configured and user is authenticated
   useEffect(() => {
@@ -205,7 +255,7 @@ export function CampusDataProvider({ children }) {
             ...prev,
             inAppEnabled: prefsRes.data.in_app_enabled,
             emailEnabled: prefsRes.data.email_enabled,
-            smsEnabled: prefsRes.data.sms_enabled,
+            emailDigestMode: prefsRes.data.email_digest_mode || 'instant',
             remindMinutesBefore: prefsRes.data.remind_minutes_before,
           }));
         }
@@ -226,14 +276,9 @@ export function CampusDataProvider({ children }) {
 
     fetchSupabaseCampusData();
 
-    // Realtime subscriptions
+    // Realtime subscriptions for timetable and announcements (notifications handled via dedicated Realtime bell subscription)
     const channel = supabase
       .channel('campusecho-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => fetchSupabaseCampusData()
-      )
       .on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_slots' }, () =>
         fetchSupabaseCampusData()
       )
@@ -552,7 +597,62 @@ export function CampusDataProvider({ children }) {
       createdAt: new Date().toISOString(),
     };
     setNotifications((prev) => [newNotif, ...prev]);
+
+    // Trigger automated email alert when email notifications are enabled
+    if (notificationPrefs?.emailEnabled && user?.email && notificationPrefs?.emailDigestMode !== 'daily_summary') {
+      fetch('/api/notifications/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientEmail: user.email,
+          subject: title,
+          message,
+          category,
+        }),
+      }).catch(() => {
+        // Non-blocking background email attempt
+      });
+    }
+
     return newNotif;
+  }
+
+  function handleRealtimeNotification(payload) {
+    const { eventType, new: newRow, old: oldRow } = payload || {};
+    if (eventType === 'INSERT' && newRow) {
+      const mapped = {
+        id: newRow.id,
+        title: newRow.title,
+        message: newRow.message,
+        category: newRow.category,
+        oldVenue: newRow.old_venue,
+        newVenue: newRow.new_venue,
+        isRead: Boolean(newRow.is_read),
+        createdAt: newRow.created_at,
+      };
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === mapped.id)) return prev;
+        return [mapped, ...prev];
+      });
+    } else if (eventType === 'UPDATE' && newRow) {
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === newRow.id
+            ? {
+                ...n,
+                title: newRow.title ?? n.title,
+                message: newRow.message ?? n.message,
+                category: newRow.category ?? n.category,
+                oldVenue: newRow.old_venue ?? n.oldVenue,
+                newVenue: newRow.new_venue ?? n.newVenue,
+                isRead: typeof newRow.is_read === 'boolean' ? newRow.is_read : n.isRead,
+              }
+            : n
+        )
+      );
+    } else if (eventType === 'DELETE' && oldRow?.id) {
+      setNotifications((prev) => prev.filter((n) => n.id !== oldRow.id));
+    }
   }
 
   async function markNotificationRead(id, isRead = true) {
@@ -565,7 +665,7 @@ export function CampusDataProvider({ children }) {
   async function markAllNotificationsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     if (isSupabaseConfigured && supabase && user) {
-      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id);
+      await supabase.from('notifications').update({ is_read: true }).eq('user_id', user.id).eq('is_read', false);
     }
   }
 
@@ -576,7 +676,7 @@ export function CampusDataProvider({ children }) {
         user_id: user.id,
         in_app_enabled: nextPrefs.inAppEnabled,
         email_enabled: nextPrefs.emailEnabled,
-        sms_enabled: nextPrefs.smsEnabled,
+        email_digest_mode: nextPrefs.emailDigestMode || 'instant',
         remind_minutes_before: Number(nextPrefs.remindMinutesBefore) || 30,
         updated_at: new Date().toISOString(),
       });
@@ -743,11 +843,14 @@ export function CampusDataProvider({ children }) {
         unreadCount,
         notificationPrefs,
         echoBotMessages,
+        siteConfig,
         dataLoading,
+        refreshSiteState,
         saveTimetableSlot,
         publishAnnouncement,
         markNotificationRead,
         markAllNotificationsRead,
+        handleRealtimeNotification,
         updateNotificationPrefs,
         sendEchoBotMessage,
         clearEchoBotHistory,

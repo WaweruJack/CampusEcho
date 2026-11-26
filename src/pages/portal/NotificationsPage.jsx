@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, CheckCheck, Mail, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Bell, CheckCheck, Mail, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCampusData } from '../../context/CampusDataContext';
 
@@ -21,7 +21,7 @@ export default function NotificationsPage() {
 
   const [filter, setFilter] = useState('all');
   const [dispatchStatus, setDispatchStatus] = useState('');
-  const [sendingChannel, setSendingChannel] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const filtered = notifications.filter((n) => {
     if (filter === 'unread') return !n.isRead;
@@ -30,32 +30,31 @@ export default function NotificationsPage() {
     return true;
   });
 
-  async function testExternalDispatch(channel) {
+  async function sendTestEmailAlert() {
     setDispatchStatus('');
-    setSendingChannel(channel);
+    setSendingEmail(true);
     const latest = notifications[0];
     try {
       const res = await fetch('/api/notifications/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          channel,
           recipientEmail: user?.email,
-          recipientPhone: user?.phoneNumber,
           subject: latest?.title || 'CampusEcho Alert',
           message: latest?.message || 'Upcoming class alert from CampusEcho MUST.',
+          category: latest?.category || 'announcement',
         }),
       });
       const data = await res.json();
       if (data.delivered) {
-        setDispatchStatus(`Dispatched successfully via ${data.provider}.`);
+        setDispatchStatus(`Email alert sent to ${user?.email} via ${data.provider}.`);
       } else {
-        setDispatchStatus(data.detail || data.error || 'Provider configuration required.');
+        setDispatchStatus(data.detail || data.error || 'Email provider configuration required.');
       }
     } catch {
-      setDispatchStatus('Could not reach notification dispatch endpoint.');
+      setDispatchStatus('Could not reach email notification dispatch endpoint.');
     } finally {
-      setSendingChannel('');
+      setSendingEmail(false);
     }
   }
 
@@ -104,21 +103,12 @@ export default function NotificationsPage() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            disabled={sendingChannel === 'email'}
-            onClick={() => testExternalDispatch('email')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
+            disabled={sendingEmail}
+            onClick={sendTestEmailAlert}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <Mail className="h-3.5 w-3.5" />
-            <span>{sendingChannel === 'email' ? 'Checking...' : 'Test Email Alert'}</span>
-          </button>
-          <button
-            type="button"
-            disabled={sendingChannel === 'sms'}
-            onClick={() => testExternalDispatch('sms')}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-medium hover:bg-slate-50 dark:hover:bg-slate-800"
-          >
-            <MessageSquare className="h-3.5 w-3.5" />
-            <span>{sendingChannel === 'sms' ? 'Checking...' : 'Test SMS Alert'}</span>
+            <span>{sendingEmail ? 'Sending...' : `Send Test Email (${user?.email || 'MUST Email'})`}</span>
           </button>
         </div>
       </div>

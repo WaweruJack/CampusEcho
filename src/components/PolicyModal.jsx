@@ -35,7 +35,7 @@ export default function PolicyModal({ open, type, onClose }) {
               </p>
               <h3 className="font-semibold text-slate-900 dark:text-white">1. Data Collected</h3>
               <p>
-                Registration collects your full name, MUST registration or staff number, official institutional email address (@students.must.ac.ke or @must.ac.ke), programme or department, and optional phone number for SMS class alerts.
+                Registration collects your full name, MUST registration or staff number, official institutional email address (@students.must.ac.ke or @must.ac.ke) for class and venue email alerts, programme or department, and contact phone number.
               </p>
               <h3 className="font-semibold text-slate-900 dark:text-white">2. Access & Security</h3>
               <p>

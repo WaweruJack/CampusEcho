@@ -105,7 +105,7 @@ export default function SettingsPage() {
           <label className="flex items-center justify-between gap-4 cursor-pointer">
             <div>
               <p className="font-medium text-slate-900 dark:text-white">Email Alerts</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Send urgent venue shifts and CAT schedules to your MUST email</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Send urgent venue shifts, cancellations, and CAT schedules to your MUST email</p>
             </div>
             <input
               type="checkbox"
@@ -115,18 +115,21 @@ export default function SettingsPage() {
             />
           </label>
 
-          <label className="flex items-center justify-between gap-4 cursor-pointer">
-            <div>
-              <p className="font-medium text-slate-900 dark:text-white">SMS Alerts (Kenya Carrier Delivery)</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Deliver last-minute lecture room changes via SMS when configured</p>
+          {prefs.emailEnabled && (
+            <div className="pt-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                Email Delivery Cadence
+              </label>
+              <select
+                value={prefs.emailDigestMode || 'instant'}
+                onChange={(e) => setPrefs((p) => ({ ...p, emailDigestMode: e.target.value }))}
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
+              >
+                <option value="instant">Instant email per urgent alert</option>
+                <option value="daily_summary">Daily schedule & notice summary</option>
+              </select>
             </div>
-            <input
-              type="checkbox"
-              checked={prefs.smsEnabled}
-              onChange={(e) => setPrefs((p) => ({ ...p, smsEnabled: e.target.checked }))}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-            />
-          </label>
+          )}
 
           <div className="pt-2">
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -188,12 +191,7 @@ export default function SettingsPage() {
             {
               name: 'Email Notifications (Resend)',
               ready: Boolean(health?.email),
-              config: 'Optional server-side RESEND_API_KEY & RESEND_FROM_EMAIL',
-            },
-            {
-              name: 'SMS Notifications (Africa’s Talking)',
-              ready: Boolean(health?.sms),
-              config: 'Optional server-side AFRICASTALKING_API_KEY & AFRICASTALKING_USERNAME',
+              config: 'Server-side RESEND_API_KEY & RESEND_FROM_EMAIL in environment secrets',
             },
           ].map((item) => (
             <div

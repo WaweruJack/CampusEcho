@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS public.students (
   id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   reg_number TEXT UNIQUE NOT NULL,
   course_id UUID REFERENCES public.courses(id),
+  school_name TEXT NOT NULL DEFAULT 'School of Computing and Informatics',
   programme_name TEXT NOT NULL,
   year_of_study INTEGER NOT NULL DEFAULT 1 CHECK (year_of_study BETWEEN 1 AND 6),
   CONSTRAINT valid_must_student_email CHECK (TRUE)
@@ -226,7 +227,7 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   user_id UUID PRIMARY KEY REFERENCES public.profiles(id) ON DELETE CASCADE,
   in_app_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   email_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  sms_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  email_digest_mode TEXT NOT NULL CHECK (email_digest_mode IN ('instant', 'daily_summary')) DEFAULT 'instant',
   remind_minutes_before INTEGER NOT NULL DEFAULT 30,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -265,6 +266,32 @@ CREATE POLICY "profiles_insert_own" ON public.profiles
   WITH CHECK (id = auth.uid());
 
 CREATE POLICY "profiles_update_own" ON public.profiles
+  FOR UPDATE TO authenticated
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY "students_select_own" ON public.students
+  FOR SELECT TO authenticated
+  USING (id = auth.uid());
+
+CREATE POLICY "students_insert_own" ON public.students
+  FOR INSERT TO authenticated
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY "students_update_own" ON public.students
+  FOR UPDATE TO authenticated
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY "lecturers_select_all_auth" ON public.lecturers
+  FOR SELECT TO authenticated
+  USING (TRUE);
+
+CREATE POLICY "lecturers_insert_own" ON public.lecturers
+  FOR INSERT TO authenticated
+  WITH CHECK (id = auth.uid());
+
+CREATE POLICY "lecturers_update_own" ON public.lecturers
   FOR UPDATE TO authenticated
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());

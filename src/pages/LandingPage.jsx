@@ -97,8 +97,8 @@ const FEATURES = [
     span: 'lg:col-span-3',
     icon: Bell,
     summary:
-      'Receive immediate in-platform alerts, email updates, and optional SMS notifications whenever a venue moves, a class is cancelled, or an urgent CAT announcement is posted.',
-    meta: 'In-App · Email · SMS Preferences',
+      'Receive immediate in-platform alerts and automated email notifications whenever a venue moves, a class is cancelled, or an urgent CAT announcement is posted.',
+    meta: 'In-App · Email Alerts',
   },
 ];
 

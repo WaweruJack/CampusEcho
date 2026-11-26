@@ -1,4 +1,4 @@
-export const MUST_STUDENT_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@students\.must\.ac\.ke$/i;
+export const MUST_STUDENT_EMAIL_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@students\.must\.ac\.ke$/i;
 export const MUST_STAFF_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@must\.ac\.ke$/i;
 
 export function validateStudentEmail(email) {
@@ -6,8 +6,12 @@ export function validateStudentEmail(email) {
     return 'University email is required.';
   }
   const normalized = email.trim().toLowerCase();
+  const parts = normalized.split('@');
+  if (parts.length !== 2 || !parts[0] || parts[0].includes('..') || !normalized.endsWith('@students.must.ac.ke')) {
+    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. b@students.must.ac.ke).';
+  }
   if (!MUST_STUDENT_EMAIL_REGEX.test(normalized)) {
-    return 'Must be a valid MUST student email ending in @students.must.ac.ke (e.g. b@students.must.ac.ke).';
+    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. b@students.must.ac.ke).';
   }
   return '';
 }
@@ -43,8 +47,10 @@ export function validateStrongPassword(password) {
   return '';
 }
 
-export function validatePhone(phone) {
-  if (!phone || !phone.trim()) return 'Phone number is required for class and venue alerts.';
+export function validatePhone(phone, { required = false } = {}) {
+  if (!phone || !phone.trim()) {
+    return required ? 'Phone number is required.' : '';
+  }
   const cleaned = phone.replace(/[\s-]/g, '');
   if (!/^(\+254|0)[17]\d{8}$/.test(cleaned) && !/^\+\d{9,15}$/.test(cleaned)) {
     return 'Enter a valid phone number (e.g. +254712345678 or 0712345678).';

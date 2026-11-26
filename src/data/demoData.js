@@ -1,17 +1,68 @@
 // Demonstration dataset for CampusEcho (Meru University of Science and Technology)
 // Clearly labeled as Demo Data when Supabase credentials are not configured.
 
-export const MUST_PROGRAMMES = [
-  'BSc. Computer Science',
-  'BSc. Information Technology',
-  'BSc. Software Engineering',
-  'BSc. Data Science & Analytics',
-  'BSc. Computer Technology',
-  'BEng. Civil & Structural Engineering',
-  'BEng. Electrical & Electronic Engineering',
-  'BSc. Actuarial Science',
-  'Bachelor of Business Information Technology (BBIT)',
+export const MUST_SCHOOLS = [
+  'School of Nursing',
+  'School of Health Sciences',
+  'School of Engineering and Architecture',
+  'School of Education',
+  'School of Pure and Applied Sciences',
+  'School of Agriculture and Food Sciences',
+  'School of Computing and Informatics',
+  'School of Business and Economics',
 ];
+
+export const MUST_SCHOOL_PROGRAMMES = {
+  'School of Nursing': [
+    'BSc. Nursing',
+    'BSc. Nursing (Upgrading)',
+  ],
+  'School of Health Sciences': [
+    'BSc. Clinical Medicine & Community Health',
+    'BSc. Public Health',
+    'BSc. Medical Laboratory Sciences',
+    'BSc. Community Health & Development',
+  ],
+  'School of Engineering and Architecture': [
+    'BEng. Civil & Structural Engineering',
+    'BEng. Electrical & Electronic Engineering',
+    'BEng. Mechanical Engineering',
+    'Bachelor of Architecture',
+  ],
+  'School of Education': [
+    'BEd. Science',
+    'BEd. Arts',
+    'BEd. Technology Education',
+  ],
+  'School of Pure and Applied Sciences': [
+    'BSc. Actuarial Science',
+    'BSc. Applied Statistics',
+    'BSc. Mathematics & Computer Science',
+    'BSc. Biological Sciences',
+    'BSc. Chemistry',
+  ],
+  'School of Agriculture and Food Sciences': [
+    'BSc. Agriculture',
+    'BSc. Agribusiness Management',
+    'BSc. Food Science & Technology',
+    'BSc. Horticulture',
+  ],
+  'School of Computing and Informatics': [
+    'BSc. Computer Science',
+    'BSc. Information Technology',
+    'BSc. Software Engineering',
+    'BSc. Data Science & Analytics',
+    'BSc. Computer Technology',
+  ],
+  'School of Business and Economics': [
+    'Bachelor of Business Information Technology (BBIT)',
+    'Bachelor of Commerce',
+    'BSc. Economics',
+    'BSc. Procurement & Logistics Management',
+  ],
+};
+
+export const MUST_PROGRAMMES = Object.values(MUST_SCHOOL_PROGRAMMES).flat();
 
 export const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -504,6 +555,7 @@ export const DEMO_USERS = {
     role: 'student',
     lecturerStatus: null,
     regNumber: 'CT201/104521/23',
+    school: 'School of Computing and Informatics',
     programme: 'BSc. Computer Science',
     yearOfStudy: 3,
     phoneNumber: '+254712345678',

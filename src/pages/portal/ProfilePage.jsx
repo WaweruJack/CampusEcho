@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { MUST_PROGRAMMES } from '../../data/demoData';
+import { MUST_PROGRAMMES, MUST_SCHOOLS, MUST_SCHOOL_PROGRAMMES } from '../../data/demoData';
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword } = useAuth();
@@ -10,6 +10,7 @@ export default function ProfilePage() {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     phoneNumber: user?.phoneNumber || '',
+    school: user?.school || MUST_SCHOOLS[6],
     programme: user?.programme || MUST_PROGRAMMES[0],
   });
   const [profileMsg, setProfileMsg] = useState({ error: '', success: '' });
@@ -81,11 +82,14 @@ export default function ProfilePage() {
         </div>
         <div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {user?.role === 'lecturer' ? 'Department' : 'Course / Programme'}
+            {user?.role === 'lecturer' ? 'Department' : 'School & Programme'}
           </p>
           <p className="font-semibold text-slate-900 dark:text-white mt-0.5">
             {user?.programme || user?.department || 'MUST'}
           </p>
+          {user?.role === 'student' && user?.school && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{user.school}</p>
+          )}
         </div>
         <div>
           <p className="text-xs text-slate-500 dark:text-slate-400">Phone Number</p>
@@ -142,7 +146,7 @@ export default function ProfilePage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-              Phone Number (For SMS Alerts)
+              Phone Number
             </label>
             <input
               type="tel"
@@ -154,20 +158,44 @@ export default function ProfilePage() {
           </div>
 
           {user?.role === 'student' && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Course / Programme
-              </label>
-              <select
-                value={form.programme}
-                onChange={(e) => setForm((p) => ({ ...p, programme: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-              >
-                {MUST_PROGRAMMES.map((prog) => (
-                  <option key={prog} value={prog}>{prog}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  School
+                </label>
+                <select
+                  value={form.school}
+                  onChange={(e) => {
+                    const nextSchool = e.target.value;
+                    const progs = MUST_SCHOOL_PROGRAMMES[nextSchool] || MUST_PROGRAMMES;
+                    setForm((p) => ({
+                      ...p,
+                      school: nextSchool,
+                      programme: progs.includes(p.programme) ? p.programme : progs[0],
+                    }));
+                  }}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                >
+                  {MUST_SCHOOLS.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Course / Programme
+                </label>
+                <select
+                  value={form.programme}
+                  onChange={(e) => setForm((p) => ({ ...p, programme: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                >
+                  {(MUST_SCHOOL_PROGRAMMES[form.school] || MUST_PROGRAMMES).map((prog) => (
+                    <option key={prog} value={prog}>{prog}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           {profileMsg.error && <p className="text-xs text-rose-600 dark:text-rose-400">{profileMsg.error}</p>}

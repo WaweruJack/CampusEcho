@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+.campusecho-admin.json
+.campusecho-site-config.json
+

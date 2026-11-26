@@ -8,6 +8,9 @@ import PortalLayout from './components/PortalLayout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import OwnerConsolePage from './pages/OwnerConsolePage';
 
 import DashboardOverview from './pages/portal/DashboardOverview';
 import TimetablePage from './pages/portal/TimetablePage';
@@ -28,9 +31,21 @@ export default function App() {
         <CampusDataProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<LandingPage />} />
+              <Route path="/" element={<LoginPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/console" element={<OwnerConsolePage />} />
+
+              <Route
+                path="/home"
+                element={
+                  <ProtectedRoute>
+                    <LandingPage />
+                  </ProtectedRoute>
+                }
+              />
 
               <Route
                 path="/dashboard"
@@ -60,7 +75,7 @@ export default function App() {
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
 
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
           </BrowserRouter>
         </CampusDataProvider>

@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useCampusData } from '../context/CampusDataContext';
+import NotificationBell from './NotificationBell';
 
 const ROUTE_TITLES = {
   '/dashboard': 'Overview',
@@ -41,7 +42,7 @@ const ROUTE_TITLES = {
 export default function PortalLayout() {
   const { user, logout, isSupabaseConfigured } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { unreadCount } = useCampusData();
+  const { unreadCount, siteConfig } = useCampusData();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -70,11 +71,13 @@ export default function PortalLayout() {
     <div className="flex h-full flex-col justify-between bg-slate-900 text-slate-100 dark:bg-slate-950 border-r border-slate-800">
       <div>
         <div className="flex items-center justify-between px-5 h-16 border-b border-slate-800">
-          <Link to="/" className="flex items-center gap-2.5 text-white whitespace-nowrap shrink-0">
+          <Link to="/dashboard" className="flex items-center gap-2.5 text-white whitespace-nowrap shrink-0">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
               <GraduationCap className="h-4.5 w-4.5" />
             </span>
-            <span className="font-display text-lg font-bold tracking-tight">CampusEcho</span>
+            <span className="font-display text-lg font-bold tracking-tight">
+              {siteConfig?.portalName || 'CampusEcho'}
+            </span>
           </Link>
           <button
             type="button"
@@ -140,6 +143,18 @@ export default function PortalLayout() {
       </div>
 
       <div className="px-3 py-4 border-t border-slate-800 space-y-1">
+        <NavLink
+          to="/home"
+          onClick={() => setMobileOpen(false)}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              isActive ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`
+          }
+        >
+          <GraduationCap className="h-4 w-4 shrink-0" />
+          <span>About CampusEcho</span>
+        </NavLink>
         <NavLink
           to="/dashboard/profile"
           onClick={() => setMobileOpen(false)}
@@ -214,6 +229,20 @@ export default function PortalLayout() {
           </div>
         )}
 
+        {siteConfig?.bannerEnabled && siteConfig?.bannerText && (
+          <div
+            className={`px-4 sm:px-6 py-2 text-xs font-medium border-b ${
+              siteConfig.bannerTone === 'urgent'
+                ? 'bg-rose-900 text-rose-50 border-rose-800'
+                : siteConfig.bannerTone === 'warning'
+                ? 'bg-amber-900 text-amber-50 border-amber-800'
+                : 'bg-sky-900 text-sky-50 border-sky-800'
+            }`}
+          >
+            {siteConfig.bannerText}
+          </div>
+        )}
+
         <header className="sticky top-0 z-30 h-16 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -246,18 +275,7 @@ export default function PortalLayout() {
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
-            <Link
-              to="/dashboard/notifications"
-              className="h-10 w-10 relative inline-flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-indigo-600 text-white text-[10px] font-semibold flex items-center justify-center tabular-nums">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
+            <NotificationBell />
 
             <Link
               to="/dashboard/profile"
@@ -280,7 +298,19 @@ export default function PortalLayout() {
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Outlet />
+          {siteConfig?.maintenanceMode ? (
+            <div className="max-w-lg mx-auto mt-12 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 text-center space-y-3">
+              <GraduationCap className="h-8 w-8 text-indigo-700 dark:text-cyan-400 mx-auto" />
+              <h2 className="font-display text-xl font-bold text-slate-900 dark:text-white">
+                Scheduled Maintenance
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {siteConfig.maintenanceMessage}
+              </p>
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>
