@@ -294,41 +294,41 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Dashboard Preview Mockup */}
+              {/* Live Portal Capabilities Card */}
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-5">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
                   <span className="text-xs font-semibold text-slate-900 dark:text-white">
-                    Student Portal Preview · Today’s Schedule
+                    Live MUST Student Portal Modules
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-                    Sample Timetable View
+                  <span className="text-xs text-indigo-700 dark:text-cyan-400 font-medium">
+                    Real-Time Sync
                   </span>
                 </div>
                 <div className="mt-3 space-y-2.5 text-xs">
                   <div className="flex items-center justify-between gap-4 py-2 border-b border-slate-200/70 dark:border-slate-800/70">
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-white">
-                        CCS 3201 · Database Systems
+                        Timetable & Venue Shift Alerts
                       </p>
-                      <p className="text-amber-700 dark:text-amber-400 mt-0.5">
-                        Rescheduled Venue: Lecture Hall 2 → Lecture Hall 4
+                      <p className="text-slate-500 dark:text-slate-400 mt-0.5">
+                        Collision-checked halls, free-period windows, and instant email notices
                       </p>
                     </div>
-                    <span className="font-mono-nums text-slate-600 dark:text-slate-300 shrink-0">
-                      11:00 – 13:00
+                    <span className="font-mono-nums text-indigo-700 dark:text-cyan-400 font-semibold shrink-0">
+                      Live
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-4 py-1.5">
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-white">
-                        CIT 3203 · Computer Networks & Security
+                        EchoBot AI & Campus Navigation
                       </p>
                       <p className="text-slate-500 dark:text-slate-400 mt-0.5">
-                        Networking & Systems Lab 3 · Computing Wing
+                        Direct walking routes to lecture halls, labs, libraries, and student offices
                       </p>
                     </div>
-                    <span className="font-mono-nums text-slate-600 dark:text-slate-300 shrink-0">
-                      14:00 – 16:00
+                    <span className="font-mono-nums text-indigo-700 dark:text-cyan-400 font-semibold shrink-0">
+                      24/7
                     </span>
                   </div>
                 </div>
@@ -491,7 +491,7 @@ export default function LandingPage() {
                     required
                     value={contactForm.email}
                     onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))}
-                    placeholder="b@students.must.ac.ke"
+                    placeholder="student@students.must.ac.ke"
                     className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
                 </div>

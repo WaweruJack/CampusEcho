@@ -263,23 +263,29 @@ export default function DashboardOverview() {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
-            {notifications.slice(0, 4).map((notif) => (
-              <div key={notif.id} className="py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`text-xs font-semibold ${notif.isRead ? 'text-slate-700 dark:text-slate-300' : 'text-slate-900 dark:text-white'}`}>
-                    {notif.title}
+            {notifications.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                No notifications yet. Live schedule changes and campus alerts will appear here.
+              </p>
+            ) : (
+              notifications.slice(0, 4).map((notif) => (
+                <div key={notif.id} className="py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={`text-xs font-semibold ${notif.isRead ? 'text-slate-700 dark:text-slate-300' : 'text-slate-900 dark:text-white'}`}>
+                      {notif.title}
+                    </p>
+                    {!notif.isRead && (
+                      <span className="text-[11px] font-semibold text-indigo-700 dark:text-cyan-400 shrink-0">
+                        Unread
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+                    {notif.message}
                   </p>
-                  {!notif.isRead && (
-                    <span className="text-[11px] font-semibold text-indigo-700 dark:text-cyan-400 shrink-0">
-                      Unread
-                    </span>
-                  )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  {notif.message}
-                </p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
       </div>
@@ -298,23 +304,29 @@ export default function DashboardOverview() {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
-            {announcements.slice(0, 3).map((ann) => (
-              <div key={ann.id} className="py-3.5">
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-semibold text-indigo-700 dark:text-cyan-400">{ann.unitCode}</span>
-                  <span aria-hidden="true">·</span>
-                  <span className="capitalize">{ann.category.replace('_', ' ')}</span>
-                  <span aria-hidden="true">·</span>
-                  <span>{ann.authorName}</span>
+            {announcements.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                No official announcements published yet.
+              </p>
+            ) : (
+              announcements.slice(0, 3).map((ann) => (
+                <div key={ann.id} className="py-3.5">
+                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold text-indigo-700 dark:text-cyan-400">{ann.unitCode}</span>
+                    <span aria-hidden="true">·</span>
+                    <span className="capitalize">{ann.category.replace('_', ' ')}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{ann.authorName}</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-1">
+                    {ann.title}
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
+                    {ann.body}
+                  </p>
                 </div>
-                <h4 className="text-sm font-semibold text-slate-900 dark:text-white mt-1">
-                  {ann.title}
-                </h4>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
-                  {ann.body}
-                </p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </section>
 
@@ -330,23 +342,29 @@ export default function DashboardOverview() {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
-            {services.slice(0, 4).map((srv) => (
-              <Link
-                key={srv.id}
-                to="/dashboard/services"
-                className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 -mx-2 px-2 rounded-lg transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
-                    {srv.name}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    {srv.operatingHours}
-                  </p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
-              </Link>
-            ))}
+            {services.length === 0 ? (
+              <p className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
+                Campus service directories have not been published yet.
+              </p>
+            ) : (
+              services.slice(0, 4).map((srv) => (
+                <Link
+                  key={srv.id}
+                  to="/dashboard/services"
+                  className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 -mx-2 px-2 rounded-lg transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">
+                      {srv.name}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                      {srv.operatingHours}
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 shrink-0" />
+                </Link>
+              ))
+            )}
           </div>
         </section>
       </div>

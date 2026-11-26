@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCampusData } from '../../context/CampusDataContext';
-import { DAYS_OF_WEEK } from '../../data/demoData';
+import { DAYS_OF_WEEK } from '../../data/mustCatalog';
 import { checkVenueCollision, findAlternativeVenues } from '../../lib/validation';
 import StatusIndicator from '../../components/StatusIndicator';
 
@@ -37,7 +37,7 @@ export default function LecturerPortalPage() {
 
   const [noticeForm, setNoticeForm] = useState({
     title: '',
-    unitCode: units[0]?.code || 'CCS 3201',
+    unitCode: units[0]?.code || '',
     category: 'cat',
     body: '',
     isUrgent: true,
@@ -179,7 +179,7 @@ export default function LecturerPortalPage() {
     }
     setNoticeForm({
       title: '',
-      unitCode: units[0]?.code || 'CCS 3201',
+      unitCode: units[0]?.code || '',
       category: 'cat',
       body: '',
       isUrgent: true,
@@ -228,13 +228,18 @@ export default function LecturerPortalPage() {
               <select
                 value={slotForm.unitId}
                 onChange={(e) => setSlotForm((p) => ({ ...p, unitId: e.target.value }))}
+                required
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
               >
-                {units.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.code} · {u.name}
-                  </option>
-                ))}
+                {units.length === 0 ? (
+                  <option value="">No course units assigned in database yet</option>
+                ) : (
+                  units.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.code} · {u.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -367,7 +372,7 @@ export default function LecturerPortalPage() {
 
             <button
               type="submit"
-              disabled={Boolean(liveCollision)}
+              disabled={Boolean(liveCollision) || !slotForm.unitId}
               className="w-full py-2.5 px-4 rounded-lg bg-indigo-900 hover:bg-indigo-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-xs font-semibold transition-colors disabled:opacity-50"
             >
               {editingSlotId ? 'Save Schedule Changes & Notify Students' : 'Confirm & Schedule Class'}
@@ -404,17 +409,27 @@ export default function LecturerPortalPage() {
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                   Target Course Unit
                 </label>
-                <select
-                  value={noticeForm.unitCode}
-                  onChange={(e) => setNoticeForm((p) => ({ ...p, unitCode: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
-                >
-                  {units.map((u) => (
-                    <option key={u.id} value={u.code}>
-                      {u.code} · {u.name}
-                    </option>
-                  ))}
-                </select>
+                {units.length > 0 ? (
+                  <select
+                    value={noticeForm.unitCode}
+                    onChange={(e) => setNoticeForm((p) => ({ ...p, unitCode: e.target.value }))}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  >
+                    {units.map((u) => (
+                      <option key={u.id} value={u.code}>
+                        {u.code} · {u.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={noticeForm.unitCode}
+                    onChange={(e) => setNoticeForm((p) => ({ ...p, unitCode: e.target.value }))}
+                    placeholder="e.g. CCS 3201 or Academic Notice"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                  />
+                )}
               </div>
 
               <div>

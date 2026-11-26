@@ -5,10 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { getPasswordChecks, validateStrongPassword } from '../lib/validation';
 
 export default function ResetPasswordPage() {
-  const { user, loading, isPasswordRecovery, isSupabaseConfigured, updatePassword } = useAuth();
+  const { user, loading, isPasswordRecovery, updatePassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const demoResetEmail = location.state?.demoResetEmail || '';
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -26,12 +25,8 @@ export default function ResetPasswordPage() {
   const allChecksPass = Object.values(passwordChecks).every(Boolean);
   const passwordMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
 
-  // Allow password update if Supabase recovery session is active, user is authenticated, or Demo reset flow was initiated
-  const hasValidRecoverySession =
-    !linkError &&
-    (isSupabaseConfigured
-      ? Boolean(isPasswordRecovery || user)
-      : Boolean(demoResetEmail || user || isPasswordRecovery));
+  // Allow password update only when Supabase recovery session or authenticated user session is active
+  const hasValidRecoverySession = !linkError && Boolean(isPasswordRecovery || user);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,7 +44,7 @@ export default function ResetPasswordPage() {
     }
 
     setSubmitting(true);
-    const res = await updatePassword(newPassword, { demoEmail: demoResetEmail });
+    const res = await updatePassword(newPassword);
     setSubmitting(false);
 
     if (res.error) {
@@ -127,11 +122,11 @@ export default function ResetPasswordPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {(user?.email || demoResetEmail) && (
+              {user?.email && (
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   Updating password for{' '}
                   <span className="font-semibold text-slate-900 dark:text-white font-mono-nums">
-                    {user?.email || demoResetEmail}
+                    {user.email}
                   </span>
                 </p>
               )}

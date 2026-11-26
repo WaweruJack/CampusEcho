@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertTriangle, Clock, MapPin } from 'lucide-react';
 import { useCampusData } from '../../context/CampusDataContext';
-import { DAYS_OF_WEEK } from '../../data/demoData';
+import { DAYS_OF_WEEK } from '../../data/mustCatalog';
 import {
   computeFreePeriods,
   detectStudentOverlaps,

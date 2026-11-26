@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { validateStudentEmail } from '../lib/validation';
 
 export default function ForgotPasswordPage() {
-  const { user, loading, isPasswordRecovery, requestPasswordReset, isSupabaseConfigured } = useAuth();
+  const { user, loading, isPasswordRecovery, requestPasswordReset } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
@@ -48,7 +48,6 @@ export default function ForgotPasswordPage() {
     setSentResult({
       email: email.trim().toLowerCase(),
       message: res.message,
-      isDemo: Boolean(res.isDemo),
     });
   }
 
@@ -88,22 +87,12 @@ export default function ForgotPasswordPage() {
               <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
                   <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  <span>{sentResult.isDemo ? 'Reset Request Prepared' : 'Reset Email Sent'}</span>
+                  <span>Reset Email Sent</span>
                 </div>
                 <p className="text-xs text-emerald-700 dark:text-emerald-300 leading-relaxed">
                   {sentResult.message}
                 </p>
               </div>
-
-              {!isSupabaseConfigured && sentResult.isDemo && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/reset-password', { state: { demoResetEmail: sentResult.email } })}
-                  className="w-full py-2.5 px-4 rounded-lg bg-indigo-900 hover:bg-indigo-800 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white text-sm font-semibold transition-colors"
-                >
-                  Continue to Update Password (Demo)
-                </button>
-              )}
 
               <div className="flex items-center justify-between gap-3 pt-2 text-xs">
                 <button
@@ -137,7 +126,7 @@ export default function ForgotPasswordPage() {
                       setEmail(e.target.value);
                       if (error) setError('');
                     }}
-                    placeholder="b@students.must.ac.ke"
+                    placeholder="student@students.must.ac.ke"
                     className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3.5 py-2.5 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600"
                   />
                   <Mail className="h-4 w-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />

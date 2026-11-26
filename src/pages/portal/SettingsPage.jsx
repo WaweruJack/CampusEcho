@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Sun, Moon, Bell, Database, RotateCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sun, Moon, Bell, Database, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useCampusData } from '../../context/CampusDataContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { notificationPrefs, updateNotificationPrefs, resetDemoWorkspace } = useCampusData();
+  const { notificationPrefs, updateNotificationPrefs } = useCampusData();
   const { isSupabaseConfigured } = useAuth();
 
   const [prefs, setPrefs] = useState(notificationPrefs);
@@ -164,16 +164,6 @@ export default function SettingsPage() {
             <Database className="h-4 w-4 text-indigo-700 dark:text-cyan-400" />
             <span>Backend & External Service Readiness</span>
           </h3>
-          {!isSupabaseConfigured && (
-            <button
-              type="button"
-              onClick={resetDemoWorkspace}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-700 dark:hover:text-cyan-400"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Demo Data</span>
-            </button>
-          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">

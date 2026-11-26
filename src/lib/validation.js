@@ -8,10 +8,10 @@ export function validateStudentEmail(email) {
   const normalized = email.trim().toLowerCase();
   const parts = normalized.split('@');
   if (parts.length !== 2 || !parts[0] || parts[0].includes('..') || !normalized.endsWith('@students.must.ac.ke')) {
-    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. b@students.must.ac.ke).';
+    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. student@students.must.ac.ke).';
   }
   if (!MUST_STUDENT_EMAIL_REGEX.test(normalized)) {
-    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. b@students.must.ac.ke).';
+    return 'Invalid student email. Your email must end in @students.must.ac.ke (e.g. student@students.must.ac.ke).';
   }
   return '';
 }

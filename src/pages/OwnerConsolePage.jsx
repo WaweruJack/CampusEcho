@@ -22,7 +22,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { useCampusData } from '../context/CampusDataContext';
-import { DAYS_OF_WEEK } from '../data/demoData';
+import { DAYS_OF_WEEK } from '../data/mustCatalog';
 import { checkVenueCollision, findAlternativeVenues } from '../lib/validation';
 
 const TABS = [
@@ -66,6 +66,9 @@ export default function OwnerConsolePage() {
   const [slotDraft, setSlotDraft] = useState({
     id: '',
     unitId: units[0]?.id || '',
+    unitCode: units[0]?.code || '',
+    unitName: units[0]?.name || '',
+    lecturerName: units[0]?.lecturerName || '',
     venueId: venues[0]?.id || '',
     dayOfWeek: 'Monday',
     startTime: '08:00',
@@ -273,16 +276,25 @@ export default function OwnerConsolePage() {
       return;
     }
     const unitObj = units.find((u) => u.id === slotDraft.unitId);
+    const resolvedUnitCode = (slotDraft.unitCode || unitObj?.code || '').trim();
+    const resolvedUnitName = (slotDraft.unitName || unitObj?.name || '').trim();
+    const resolvedLecturerName = (slotDraft.lecturerName || unitObj?.lecturerName || 'Assigned Lecturer').trim();
+
+    if (!resolvedUnitCode || !resolvedUnitName) {
+      notifyError('Unit code and unit name are required.');
+      return;
+    }
+
     const existing = slotDraft.id ? timetableSlots.find((s) => s.id === slotDraft.id) : null;
     const isVenueChanged = existing && existing.venueId !== slotDraft.venueId;
 
     const record = {
       id: slotDraft.id || `slot-${Date.now()}`,
-      unitId: slotDraft.unitId,
-      unitCode: unitObj?.code || 'UNIT',
-      unitName: unitObj?.name || 'Course Unit',
-      lecturerId: unitObj?.lecturerId || 'admin-assigned',
-      lecturerName: unitObj?.lecturerName || 'Assigned Lecturer',
+      unitId: slotDraft.unitId || existing?.unitId || `unit-${resolvedUnitCode.toLowerCase().replace(/\s+/g, '-')}`,
+      unitCode: resolvedUnitCode,
+      unitName: resolvedUnitName,
+      lecturerId: unitObj?.lecturerId || existing?.lecturerId || 'admin-assigned',
+      lecturerName: resolvedLecturerName,
       venueId: slotDraft.venueId,
       previousVenueId: isVenueChanged ? existing.venueId : existing?.previousVenueId || null,
       dayOfWeek: slotDraft.dayOfWeek,
@@ -303,6 +315,9 @@ export default function OwnerConsolePage() {
       setSlotDraft({
         id: '',
         unitId: units[0]?.id || '',
+        unitCode: units[0]?.code || '',
+        unitName: units[0]?.name || '',
+        lecturerName: units[0]?.lecturerName || '',
         venueId: venues[0]?.id || '',
         dayOfWeek: 'Monday',
         startTime: '08:00',
@@ -598,16 +613,6 @@ export default function OwnerConsolePage() {
     );
   }
 
-  // Local demo users for Users tab when Supabase Service Role isn't configured
-  const localDemoUsers = (() => {
-    try {
-      const raw = localStorage.getItem('campusecho_demo_registered_users');
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  })();
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <header className="sticky top-0 z-30 bg-slate-900 text-white border-b border-slate-800 px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -864,17 +869,65 @@ export default function OwnerConsolePage() {
                 {slotDraft.id ? 'Edit Timetable Slot' : 'Add Timetable Slot'}
               </h2>
 
+              {units.length > 0 && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Preset Course Unit (Optional)</label>
+                  <select
+                    value={slotDraft.unitId}
+                    onChange={(e) => {
+                      const matched = units.find((u) => u.id === e.target.value);
+                      setSlotDraft((p) => ({
+                        ...p,
+                        unitId: e.target.value,
+                        unitCode: matched?.code || p.unitCode,
+                        unitName: matched?.name || p.unitName,
+                        lecturerName: matched?.lecturerName || p.lecturerName,
+                      }));
+                    }}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
+                  >
+                    <option value="">Custom unit entry below</option>
+                    {units.map((u) => (
+                      <option key={u.id} value={u.id}>{u.code} · {u.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Unit Code</label>
+                  <input
+                    type="text"
+                    required
+                    value={slotDraft.unitCode}
+                    onChange={(e) => setSlotDraft((p) => ({ ...p, unitCode: e.target.value }))}
+                    placeholder="e.g. CCS 3201"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm font-mono-nums"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Lecturer Name</label>
+                  <input
+                    type="text"
+                    value={slotDraft.lecturerName}
+                    onChange={(e) => setSlotDraft((p) => ({ ...p, lecturerName: e.target.value }))}
+                    placeholder="Assigned Lecturer"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Course Unit</label>
-                <select
-                  value={slotDraft.unitId}
-                  onChange={(e) => setSlotDraft((p) => ({ ...p, unitId: e.target.value }))}
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Unit Name</label>
+                <input
+                  type="text"
+                  required
+                  value={slotDraft.unitName}
+                  onChange={(e) => setSlotDraft((p) => ({ ...p, unitName: e.target.value }))}
+                  placeholder="e.g. Database Systems"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 px-3 py-2 text-sm"
-                >
-                  {units.map((u) => (
-                    <option key={u.id} value={u.id}>{u.code} · {u.name}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
@@ -983,6 +1036,9 @@ export default function OwnerConsolePage() {
                       setSlotDraft({
                         id: '',
                         unitId: units[0]?.id || '',
+                        unitCode: units[0]?.code || '',
+                        unitName: units[0]?.name || '',
+                        lecturerName: units[0]?.lecturerName || '',
                         venueId: venues[0]?.id || '',
                         dayOfWeek: 'Monday',
                         startTime: '08:00',
@@ -1020,7 +1076,10 @@ export default function OwnerConsolePage() {
                         onClick={() =>
                           setSlotDraft({
                             id: slot.id,
-                            unitId: slot.unitId,
+                            unitId: slot.unitId || '',
+                            unitCode: slot.unitCode || '',
+                            unitName: slot.unitName || '',
+                            lecturerName: slot.lecturerName || '',
                             venueId: slot.venueId,
                             dayOfWeek: slot.dayOfWeek,
                             startTime: slot.startTime,
@@ -1521,16 +1580,6 @@ export default function OwnerConsolePage() {
                     ? 'No profiles found in Supabase yet.'
                     : 'Add SUPABASE_SERVICE_ROLE_KEY in server secrets to manage live Supabase accounts and approve lecturers directly from this tab.'}
                 </p>
-                {localDemoUsers.length > 0 && (
-                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                    <p className="font-semibold text-slate-900 dark:text-white">Local Session Accounts ({localDemoUsers.length})</p>
-                    {localDemoUsers.map((u) => (
-                      <div key={u.id} className="py-2 border-b border-slate-100 dark:border-slate-800">
-                        <span className="font-semibold text-slate-900 dark:text-white">{u.firstName} {u.lastName}</span> · {u.email} · {u.school || u.programme}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             )}
           </div>

@@ -3,71 +3,42 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import {
   CAMPUS_BUILDINGS,
   CAMPUS_VENUES,
-  CAMPUS_UNITS,
-  INITIAL_DEMO_TIMETABLE,
-  INITIAL_DEMO_ANNOUNCEMENTS,
-  INITIAL_DEMO_NEWS,
-  INITIAL_DEMO_SERVICES,
-  INITIAL_DEMO_NOTIFICATIONS,
   DAYS_OF_WEEK,
-} from '../data/demoData';
+} from '../data/mustCatalog';
 import { checkVenueCollision, findAlternativeVenues, timeToMinutes } from '../lib/validation';
 import { useAuth } from './AuthContext';
 
 const CampusDataContext = createContext(null);
-
-const STORAGE_PREFIX = 'campusecho_demo_state_v1_';
-
-function loadLocal(key, fallback) {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveLocal(key, value) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value));
-  } catch {
-    // ignore quota errors
-  }
-}
 
 export function CampusDataProvider({ children }) {
   const { user } = useAuth();
 
   const [buildings, setBuildings] = useState(CAMPUS_BUILDINGS);
   const [venues, setVenues] = useState(CAMPUS_VENUES);
-  const [units, setUnits] = useState(CAMPUS_UNITS);
-  const [timetableSlots, setTimetableSlots] = useState(() => loadLocal('timetable', INITIAL_DEMO_TIMETABLE));
-  const [announcements, setAnnouncements] = useState(() => loadLocal('announcements', INITIAL_DEMO_ANNOUNCEMENTS));
-  const [news, setNews] = useState(INITIAL_DEMO_NEWS);
-  const [services, setServices] = useState(INITIAL_DEMO_SERVICES);
-  const [notifications, setNotifications] = useState(() => loadLocal('notifications', INITIAL_DEMO_NOTIFICATIONS));
-  const [notificationPrefs, setNotificationPrefs] = useState(() =>
-    loadLocal('prefs', {
-      inAppEnabled: true,
-      emailEnabled: true,
-      emailDigestMode: 'instant',
-      remindMinutesBefore: 30,
-      venueChanges: true,
-      academicUpdates: true,
-      campusEvents: true,
-    })
-  );
-  const [echoBotMessages, setEchoBotMessages] = useState(() =>
-    loadLocal('echobot', [
-      {
-        id: 'welcome-msg',
-        role: 'assistant',
-        content:
-          'Hello! I am EchoBot, your CampusEcho assistant for Meru University of Science and Technology. Ask me about your next class, venue changes, campus buildings, cafeteria hours, or recent notices.',
-        createdAt: new Date().toISOString(),
-      },
-    ])
-  );
+  const [units, setUnits] = useState([]);
+  const [timetableSlots, setTimetableSlots] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [news, setNews] = useState([]);
+  const [services, setServices] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationPrefs, setNotificationPrefs] = useState({
+    inAppEnabled: true,
+    emailEnabled: true,
+    emailDigestMode: 'instant',
+    remindMinutesBefore: 30,
+    venueChanges: true,
+    academicUpdates: true,
+    campusEvents: true,
+  });
+  const [echoBotMessages, setEchoBotMessages] = useState([
+    {
+      id: 'welcome-msg',
+      role: 'assistant',
+      content:
+        'Hello! I am EchoBot, your CampusEcho assistant for Meru University of Science and Technology. Ask me about your timetable, venue updates, campus buildings, services, or official notices.',
+      createdAt: new Date().toISOString(),
+    },
+  ]);
   const [siteConfig, setSiteConfig] = useState({
     portalName: 'CampusEcho',
     academicTerm: '2026/2027 Semester 1',
@@ -120,7 +91,7 @@ export function CampusDataProvider({ children }) {
     refreshSiteState();
   }, []);
 
-  // Sync from Supabase when configured and user is authenticated
+  // Sync live data from Supabase when authenticated
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !user) return;
 
@@ -144,12 +115,27 @@ export function CampusDataProvider({ children }) {
           supabase.from('venues').select('*'),
           supabase.from('units').select('*, profiles:lecturer_id(first_name, last_name)'),
           supabase.from('timetable_slots').select('*'),
-          supabase.from('announcements').select('*, profiles:author_id(first_name, last_name), units(code)').order('created_at', { ascending: false }),
+          supabase
+            .from('announcements')
+            .select('*, profiles:author_id(first_name, last_name), units(code)')
+            .order('created_at', { ascending: false }),
           supabase.from('campus_news').select('*').order('published_at', { ascending: false }),
           supabase.from('campus_services').select('*'),
-          supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-          supabase.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle(),
-          supabase.from('echobot_messages').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+          supabase
+            .from('notifications')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('notification_preferences')
+            .select('*')
+            .eq('user_id', user.id)
+            .maybeSingle(),
+          supabase
+            .from('echobot_messages')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true }),
         ]);
 
         if (!mounted) return;
@@ -175,11 +161,13 @@ export function CampusDataProvider({ children }) {
               code: u.code,
               name: u.name,
               lecturerId: u.lecturer_id,
-              lecturerName: u.profiles ? `${u.profiles.first_name} ${u.profiles.last_name}` : 'Assigned Lecturer',
+              lecturerName: u.profiles
+                ? `${u.profiles.first_name} ${u.profiles.last_name}`
+                : 'Assigned Lecturer',
             }))
           );
         }
-        if (slotsRes.data) {
+        if (slotsRes.data?.length) {
           setTimetableSlots(
             slotsRes.data.map((s) => ({
               id: s.id,
@@ -195,7 +183,7 @@ export function CampusDataProvider({ children }) {
             }))
           );
         }
-        if (annRes.data) {
+        if (annRes.data?.length) {
           setAnnouncements(
             annRes.data.map((a) => ({
               id: a.id,
@@ -203,7 +191,9 @@ export function CampusDataProvider({ children }) {
               body: a.body,
               category: a.category,
               unitCode: a.units?.code || 'University Notice',
-              authorName: a.profiles ? `${a.profiles.first_name} ${a.profiles.last_name}` : 'Lecturer',
+              authorName: a.profiles
+                ? `${a.profiles.first_name} ${a.profiles.last_name}`
+                : 'Lecturer',
               isUrgent: a.is_urgent,
               createdAt: a.created_at,
             }))
@@ -276,7 +266,6 @@ export function CampusDataProvider({ children }) {
 
     fetchSupabaseCampusData();
 
-    // Realtime subscriptions for timetable and announcements (notifications handled via dedicated Realtime bell subscription)
     const channel = supabase
       .channel('campusecho-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'timetable_slots' }, () =>
@@ -292,37 +281,6 @@ export function CampusDataProvider({ children }) {
       supabase.removeChannel(channel);
     };
   }, [user?.id]);
-
-  // Persist demo state changes
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      saveLocal('timetable', timetableSlots);
-    }
-  }, [timetableSlots]);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      saveLocal('announcements', announcements);
-    }
-  }, [announcements]);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      saveLocal('notifications', notifications);
-    }
-  }, [notifications]);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      saveLocal('prefs', notificationPrefs);
-    }
-  }, [notificationPrefs]);
-
-  useEffect(() => {
-    if (!isSupabaseConfigured) {
-      saveLocal('echobot', echoBotMessages);
-    }
-  }, [echoBotMessages]);
 
   // Enrich timetable slots with unit, venue, and building metadata
   const enrichedTimetable = useMemo(() => {
@@ -351,9 +309,8 @@ export function CampusDataProvider({ children }) {
     });
   }, [timetableSlots, venues, buildings, units]);
 
-  // Determine today's day name (mapping Sunday to Monday for preview clarity)
   const todayDayName = useMemo(() => {
-    const jsDay = new Date().getDay(); // 0=Sun, 1=Mon...
+    const jsDay = new Date().getDay();
     if (jsDay === 0) return 'Monday';
     return DAYS_OF_WEEK[jsDay - 1] || 'Monday';
   }, []);
@@ -373,7 +330,6 @@ export function CampusDataProvider({ children }) {
     const upcomingToday = activeToday.find((c) => timeToMinutes(c.endTime) > currentMins);
     if (upcomingToday) return upcomingToday;
 
-    // Otherwise find first active scheduled class across the week
     for (const day of DAYS_OF_WEEK) {
       const found = enrichedTimetable
         .filter((s) => s.dayOfWeek === day && s.status !== 'cancelled' && s.status !== 'completed')
@@ -388,7 +344,6 @@ export function CampusDataProvider({ children }) {
     [notifications]
   );
 
-  // Lecturer Action: Create or Update Timetable Slot with Collision Detection & Venue Change Notifications
   async function saveTimetableSlot(payload) {
     if (!user || user.role !== 'lecturer' || user.lecturerStatus !== 'approved') {
       return { error: 'Only approved lecturers can create or modify class schedules.' };
@@ -396,7 +351,6 @@ export function CampusDataProvider({ children }) {
 
     const { id, unitId, venueId, dayOfWeek, startTime, endTime, status = 'scheduled', changeNote = '' } = payload;
 
-    // 1. Check Venue Collision
     if (status !== 'cancelled') {
       const collision = checkVenueCollision({
         slots: enrichedTimetable,
@@ -491,7 +445,6 @@ export function CampusDataProvider({ children }) {
       id ? prev.map((s) => (s.id === id ? slotRecord : s)) : [...prev, slotRecord]
     );
 
-    // Emit notifications if venue changed, cancelled, or rescheduled
     if (isVenueChanged && oldVenueObj && newVenueObj) {
       const msg = `IMPORTANT: Your ${slotRecord.unitName} class has been moved from ${oldVenueObj.name} to ${newVenueObj.name}.`;
       addNotification({
@@ -585,7 +538,7 @@ export function CampusDataProvider({ children }) {
     return { ok: true, announcement: newNotice };
   }
 
-  function addNotification({ title, message, category = 'announcement', oldVenue = null, newVenue = null }) {
+  async function addNotification({ title, message, category = 'announcement', oldVenue = null, newVenue = null }) {
     const newNotif = {
       id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       title,
@@ -598,7 +551,18 @@ export function CampusDataProvider({ children }) {
     };
     setNotifications((prev) => [newNotif, ...prev]);
 
-    // Trigger automated email alert when email notifications are enabled
+    if (isSupabaseConfigured && supabase && user?.id) {
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        title,
+        message,
+        category,
+        old_venue: oldVenue,
+        new_venue: newVenue,
+        is_read: false,
+      });
+    }
+
     if (notificationPrefs?.emailEnabled && user?.email && notificationPrefs?.emailDigestMode !== 'daily_summary') {
       fetch('/api/notifications/dispatch', {
         method: 'POST',
@@ -699,6 +663,7 @@ export function CampusDataProvider({ children }) {
         ? {
             name: `${user.firstName} ${user.lastName}`,
             role: user.role,
+            school: user.school,
             programme: user.programme,
             regNumber: user.regNumber || user.staffId,
           }
@@ -795,7 +760,7 @@ export function CampusDataProvider({ children }) {
       }
 
       return { ok: true, reply: data.reply };
-    } catch (err) {
+    } catch {
       const errMsg = {
         id: `msg-a-${Date.now()}`,
         role: 'assistant',
@@ -818,12 +783,6 @@ export function CampusDataProvider({ children }) {
         createdAt: new Date().toISOString(),
       },
     ]);
-  }
-
-  function resetDemoWorkspace() {
-    setTimetableSlots(INITIAL_DEMO_TIMETABLE);
-    setAnnouncements(INITIAL_DEMO_ANNOUNCEMENTS);
-    setNotifications(INITIAL_DEMO_NOTIFICATIONS);
   }
 
   return (
@@ -854,7 +813,6 @@ export function CampusDataProvider({ children }) {
         updateNotificationPrefs,
         sendEchoBotMessage,
         clearEchoBotHistory,
-        resetDemoWorkspace,
       }}
     >
       {children}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, CheckCircle2, Eye, EyeOff, GraduationCap, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { MUST_SCHOOLS, MUST_SCHOOL_PROGRAMMES } from '../data/demoData';
+import { MUST_SCHOOLS, MUST_SCHOOL_PROGRAMMES } from '../data/mustCatalog';
 import {
   getPasswordChecks,
   validatePhone,
@@ -19,7 +19,7 @@ function validateRegistrationEmail(emailValue) {
     return 'University email is required.';
   }
   if (!trimmed.endsWith(REQUIRED_STUDENT_EMAIL_SUFFIX)) {
-    return `Invalid student email. Your email must end in ${REQUIRED_STUDENT_EMAIL_SUFFIX} (e.g. b${REQUIRED_STUDENT_EMAIL_SUFFIX}).`;
+    return `Invalid student email. Your email must end in ${REQUIRED_STUDENT_EMAIL_SUFFIX} (e.g. student${REQUIRED_STUDENT_EMAIL_SUFFIX}).`;
   }
   return validateStudentEmail(trimmed);
 }
@@ -307,7 +307,7 @@ export default function RegisterPage() {
                     onBlur={() => setEmailTouched(true)}
                     aria-invalid={showEmailError}
                     aria-describedby={showEmailError ? 'reg-email-error' : undefined}
-                    placeholder="b@students.must.ac.ke"
+                    placeholder="student@students.must.ac.ke"
                     className={`w-full rounded-lg border bg-white dark:bg-slate-950 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 ${
                       showEmailError
                         ? 'border-rose-500 dark:border-rose-500 focus:ring-rose-500'

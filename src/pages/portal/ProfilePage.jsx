@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { MUST_PROGRAMMES, MUST_SCHOOLS, MUST_SCHOOL_PROGRAMMES } from '../../data/demoData';
+import { MUST_PROGRAMMES, MUST_SCHOOLS, MUST_SCHOOL_PROGRAMMES } from '../../data/mustCatalog';
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword } = useAuth();

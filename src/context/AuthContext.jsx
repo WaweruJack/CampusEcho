@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { DEMO_USERS } from '../data/demoData';
 import {
   validateStudentEmail,
   validateStaffEmail,
@@ -10,21 +9,8 @@ import {
 
 const AuthContext = createContext(null);
 
-const DEMO_USERS_STORAGE_KEY = 'campusecho_demo_registered_users';
-const DEMO_SESSION_KEY = 'campusecho_demo_active_session';
-
-function getStoredDemoUsers() {
-  try {
-    const raw = localStorage.getItem(DEMO_USERS_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredDemoUsers(users) {
-  localStorage.setItem(DEMO_USERS_STORAGE_KEY, JSON.stringify(users));
-}
+const SUPABASE_MISSING_ERROR =
+  'Live authentication requires Supabase configuration (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY).';
 
 function formatAuthError(err) {
   const msg = err?.message || String(err || 'Authentication request failed.');
@@ -51,51 +37,44 @@ export function AuthProvider({ children }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(() => hasRecoveryParamsInUrl());
 
   useEffect(() => {
-    if (isSupabaseConfigured && supabase) {
-      let mounted = true;
-      supabase.auth.getSession().then(async ({ data }) => {
-        if (!mounted) return;
-        if (hasRecoveryParamsInUrl()) {
-          setIsPasswordRecovery(true);
-        }
-        if (data?.session?.user) {
-          await loadSupabaseProfile(data.session.user);
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      });
-
-      const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsPasswordRecovery(true);
-        }
-        if (session?.user) {
-          await loadSupabaseProfile(session.user);
-        } else {
-          setUser(null);
-          if (event === 'SIGNED_OUT') {
-            setIsPasswordRecovery(false);
-          }
-        }
-      });
-
-      return () => {
-        mounted = false;
-        listener?.subscription?.unsubscribe();
-      };
-    }
-
-    // Demo mode session check
-    try {
-      const rawSession = localStorage.getItem(DEMO_SESSION_KEY) || sessionStorage.getItem(DEMO_SESSION_KEY);
-      if (rawSession) {
-        setUser(JSON.parse(rawSession));
-      }
-    } catch {
+    if (!isSupabaseConfigured || !supabase) {
       setUser(null);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    let mounted = true;
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!mounted) return;
+      if (hasRecoveryParamsInUrl()) {
+        setIsPasswordRecovery(true);
+      }
+      if (data?.session?.user) {
+        await loadSupabaseProfile(data.session.user);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+      }
+      if (session?.user) {
+        await loadSupabaseProfile(session.user);
+      } else {
+        setUser(null);
+        if (event === 'SIGNED_OUT') {
+          setIsPasswordRecovery(false);
+        }
+      }
+    });
+
+    return () => {
+      mounted = false;
+      listener?.subscription?.unsubscribe();
+    };
   }, []);
 
   async function ensureStudentRecordsFromMetadata(authUser) {
@@ -161,7 +140,6 @@ export function AuthProvider({ children }) {
         yearOfStudy: studentRec?.year_of_study || 1,
         staffId: lecturerRec?.staff_id || '',
         department: lecturerRec?.department || '',
-        isDemo: false,
       });
     } else {
       const meta = authUser.user_metadata || {};
@@ -179,12 +157,15 @@ export function AuthProvider({ children }) {
         yearOfStudy: Number(meta.year_of_study) || 1,
         staffId: meta.staff_id || '',
         department: meta.department || '',
-        isDemo: false,
       });
     }
   }
 
   async function registerStudent(payload) {
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     const emailErr = validateStudentEmail(payload.email);
     if (emailErr) return { error: emailErr };
     const passErr = validateStrongPassword(payload.password);
@@ -210,88 +191,61 @@ export function AuthProvider({ children }) {
     const trimmedSchool = payload.school.trim();
     const yearNum = Number(payload.yearOfStudy) || 1;
 
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: payload.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-          data: {
-            first_name: payload.firstName.trim(),
-            last_name: payload.lastName.trim(),
-            role: 'student',
-            reg_number: trimmedRegNo,
-            school: trimmedSchool,
-            programme: payload.programme.trim(),
-            year_of_study: yearNum,
-            phone_number: trimmedPhone,
-          },
-        },
-      });
-      if (error) return { error: formatAuthError(error) };
-
-      // Supabase returns an empty identities array when email is already registered with confirmation enabled
-      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-        return { error: 'An account with this university email already exists. Please sign in or reset your password.' };
-      }
-
-      if (data?.user && data?.session) {
-        const { error: profileErr } = await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: normalizedEmail,
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: payload.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
           first_name: payload.firstName.trim(),
           last_name: payload.lastName.trim(),
           role: 'student',
+          reg_number: trimmedRegNo,
+          school: trimmedSchool,
+          programme: payload.programme.trim(),
+          year_of_study: yearNum,
           phone_number: trimmedPhone,
+        },
+      },
+    });
+    if (error) return { error: formatAuthError(error) };
+
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      return { error: 'An account with this university email already exists. Please sign in or reset your password.' };
+    }
+
+    if (data?.user && data?.session) {
+      const { error: profileErr } = await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: normalizedEmail,
+        first_name: payload.firstName.trim(),
+        last_name: payload.lastName.trim(),
+        role: 'student',
+        phone_number: trimmedPhone,
+      });
+      if (!profileErr) {
+        await supabase.from('students').upsert({
+          id: data.user.id,
+          reg_number: trimmedRegNo,
+          school_name: trimmedSchool,
+          programme_name: payload.programme.trim(),
+          year_of_study: yearNum,
         });
-        if (!profileErr) {
-          await supabase.from('students').upsert({
-            id: data.user.id,
-            reg_number: trimmedRegNo,
-            school_name: trimmedSchool,
-            programme_name: payload.programme.trim(),
-            year_of_study: yearNum,
-          });
-        }
-        await loadSupabaseProfile(data.user);
       }
-
-      return {
-        user: data?.user,
-        needsEmailConfirm: !data?.session,
-      };
+      await loadSupabaseProfile(data.user);
     }
 
-    // Demo mode registration with real local persistence
-    const existing = getStoredDemoUsers();
-    if (existing.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-      return { error: 'An account with this university email already exists.' };
-    }
-
-    const newUser = {
-      id: `student-${Date.now()}`,
-      email: normalizedEmail,
-      password: payload.password,
-      firstName: payload.firstName.trim(),
-      lastName: payload.lastName.trim(),
-      role: 'student',
-      lecturerStatus: null,
-      regNumber: trimmedRegNo,
-      school: trimmedSchool,
-      programme: payload.programme.trim(),
-      yearOfStudy: yearNum,
-      phoneNumber: trimmedPhone,
-      isDemo: true,
+    return {
+      user: data?.user,
+      needsEmailConfirm: !data?.session,
     };
-
-    saveStoredDemoUsers([...existing, newUser]);
-    const { password: _removed, ...safeUser } = newUser;
-    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(safeUser));
-    setUser(safeUser);
-    return { user: safeUser, needsEmailConfirm: false };
   }
 
   async function registerLecturer(payload) {
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     const emailErr = validateStaffEmail(payload.email);
     if (emailErr) return { error: emailErr };
     const passErr = validateStrongPassword(payload.password);
@@ -306,75 +260,50 @@ export function AuthProvider({ children }) {
     }
 
     const normalizedEmail = payload.email.trim().toLowerCase();
-    const hasValidApprovalCode = payload.approvalCode?.trim().toUpperCase() === 'MUST-FACULTY-2026';
-    const lecturerStatus = hasValidApprovalCode ? 'approved' : 'pending';
+    const lecturerStatus = 'pending';
 
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password: payload.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`,
-          data: {
-            first_name: payload.firstName.trim(),
-            last_name: payload.lastName.trim(),
-            role: 'lecturer',
-            lecturer_status: lecturerStatus,
-            staff_id: payload.staffId.trim().toUpperCase(),
-            department: payload.department.trim(),
-            phone_number: payload.phoneNumber?.trim() || '',
-          },
-        },
-      });
-      if (error) return { error: formatAuthError(error) };
-      if (data?.user && data?.session) {
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          email: normalizedEmail,
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password: payload.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: {
           first_name: payload.firstName.trim(),
           last_name: payload.lastName.trim(),
           role: 'lecturer',
           lecturer_status: lecturerStatus,
-          phone_number: payload.phoneNumber?.trim() || '',
-        });
-        await supabase.from('lecturers').upsert({
-          id: data.user.id,
           staff_id: payload.staffId.trim().toUpperCase(),
           department: payload.department.trim(),
-        });
-        await loadSupabaseProfile(data.user);
-      }
-      return { user: data?.user, lecturerStatus, needsEmailConfirm: !data?.session };
+          phone_number: payload.phoneNumber?.trim() || '',
+        },
+      },
+    });
+    if (error) return { error: formatAuthError(error) };
+    if (data?.user && data?.session) {
+      await supabase.from('profiles').upsert({
+        id: data.user.id,
+        email: normalizedEmail,
+        first_name: payload.firstName.trim(),
+        last_name: payload.lastName.trim(),
+        role: 'lecturer',
+        lecturer_status: lecturerStatus,
+        phone_number: payload.phoneNumber?.trim() || '',
+      });
+      await supabase.from('lecturers').upsert({
+        id: data.user.id,
+        staff_id: payload.staffId.trim().toUpperCase(),
+        department: payload.department.trim(),
+      });
+      await loadSupabaseProfile(data.user);
     }
-
-    const existing = getStoredDemoUsers();
-    if (existing.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-      return { error: 'An account with this institutional email already exists.' };
-    }
-
-    const newUser = {
-      id: `lecturer-${Date.now()}`,
-      email: normalizedEmail,
-      password: payload.password,
-      firstName: payload.firstName.trim(),
-      lastName: payload.lastName.trim(),
-      role: 'lecturer',
-      lecturerStatus,
-      staffId: payload.staffId.trim().toUpperCase(),
-      department: payload.department.trim(),
-      programme: payload.department.trim(),
-      phoneNumber: payload.phoneNumber?.trim() || '',
-      isDemo: true,
-    };
-
-    saveStoredDemoUsers([...existing, newUser]);
-    const { password: _removed, ...safeUser } = newUser;
-    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(safeUser));
-    setUser(safeUser);
-    return { user: safeUser, lecturerStatus };
+    return { user: data?.user, lecturerStatus, needsEmailConfirm: !data?.session };
   }
 
-  async function login({ email, password, rememberMe = true }) {
+  async function login({ email, password }) {
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     const emailErr = validateStudentEmail(email);
     if (emailErr) {
       return { error: emailErr };
@@ -384,125 +313,68 @@ export function AuthProvider({ children }) {
     }
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (isSupabaseConfigured && supabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
-      });
-      if (error) return { error: formatAuthError(error) };
-      if (data?.user) {
-        await loadSupabaseProfile(data.user);
-      }
-      return { user: data?.user };
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+    if (error) return { error: formatAuthError(error) };
+    if (data?.user) {
+      await loadSupabaseProfile(data.user);
     }
-
-    // Demo mode check against locally registered users
-    const stored = getStoredDemoUsers();
-    const matched = stored.find((u) => u.email.toLowerCase() === normalizedEmail);
-    if (!matched) {
-      return {
-        error:
-          'Account not found. Please create a new student account or use the Demo Student access below.',
-      };
-    }
-    if (matched.password !== password) {
-      return { error: 'Incorrect password. Please try again.' };
-    }
-
-    const { password: _removed, ...safeUser } = matched;
-    if (rememberMe) {
-      localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(safeUser));
-      sessionStorage.removeItem(DEMO_SESSION_KEY);
-    } else {
-      sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(safeUser));
-      localStorage.removeItem(DEMO_SESSION_KEY);
-    }
-    setUser(safeUser);
-    return { user: safeUser };
-  }
-
-  function loginWithDemoProfile(type) {
-    if (isSupabaseConfigured) {
-      return { error: 'Demo profiles are disabled when live Supabase is connected.' };
-    }
-    const demoUser = type === 'lecturer' ? DEMO_USERS.lecturer : DEMO_USERS.student;
-    localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(demoUser));
-    setUser(demoUser);
-    return { user: demoUser };
+    return { user: data?.user };
   }
 
   async function logout() {
     if (isSupabaseConfigured && supabase) {
       await supabase.auth.signOut();
     }
-    localStorage.removeItem(DEMO_SESSION_KEY);
-    sessionStorage.removeItem(DEMO_SESSION_KEY);
     setIsPasswordRecovery(false);
     setUser(null);
   }
 
   async function requestPasswordReset(email) {
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     const emailErr = validateStudentEmail(email);
     if (emailErr) return { error: emailErr };
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) return { error: formatAuthError(error) };
-      return {
-        ok: true,
-        message: `Password reset instructions have been sent to ${normalizedEmail}. Open the link in your inbox to set a new password.`,
-      };
-    }
-
+    const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) return { error: formatAuthError(error) };
     return {
       ok: true,
-      isDemo: true,
-      email: normalizedEmail,
-      message:
-        'Demo Mode: Live reset emails require Supabase Authentication configuration. You can continue below to test the password update page locally.',
+      message: `Password reset instructions have been sent to ${normalizedEmail}. Open the link in your inbox to set a new password.`,
     };
   }
 
-  async function updatePassword(newPassword, { demoEmail } = {}) {
+  async function updatePassword(newPassword) {
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     const err = validateStrongPassword(newPassword);
     if (err) return { error: err };
 
-    if (isSupabaseConfigured && supabase) {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) {
-        return { error: 'Your password reset session has expired or is missing. Please request a new reset link.' };
-      }
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-      if (error) return { error: formatAuthError(error) };
-      setIsPasswordRecovery(false);
-      return { ok: true };
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData?.session) {
+      return { error: 'Your password reset session has expired or is missing. Please request a new reset link.' };
     }
-
-    const targetEmail = (demoEmail || user?.email || '').trim().toLowerCase();
-    const stored = getStoredDemoUsers();
-    const idx = stored.findIndex(
-      (u) => (user?.id && u.id === user.id) || (targetEmail && u.email.toLowerCase() === targetEmail)
-    );
-    if (idx !== -1) {
-      stored[idx].password = newPassword;
-      saveStoredDemoUsers(stored);
-      setIsPasswordRecovery(false);
-      return { ok: true };
-    }
-
-    if (targetEmail === DEMO_USERS.student.email.toLowerCase() || (user && user.id.startsWith('demo-'))) {
-      setIsPasswordRecovery(false);
-      return { ok: true };
-    }
-
-    return { error: 'No matching local student account was found to update.' };
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: formatAuthError(error) };
+    setIsPasswordRecovery(false);
+    return { ok: true };
   }
 
   async function updateProfile(updates) {
     if (!user) return { error: 'No active session.' };
+    if (!isSupabaseConfigured || !supabase) {
+      return { error: SUPABASE_MISSING_ERROR };
+    }
+
     if (updates.phoneNumber) {
       const phoneErr = validatePhone(updates.phoneNumber, { required: false });
       if (phoneErr) return { error: phoneErr };
@@ -517,35 +389,25 @@ export function AuthProvider({ children }) {
       programme: updates.programme?.trim() || user.programme,
     };
 
-    if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase
-        .from('profiles')
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        first_name: updatedUser.firstName,
+        last_name: updatedUser.lastName,
+        phone_number: updatedUser.phoneNumber,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id);
+    if (error) return { error: error.message };
+
+    if (user.role === 'student') {
+      await supabase
+        .from('students')
         .update({
-          first_name: updatedUser.firstName,
-          last_name: updatedUser.lastName,
-          phone_number: updatedUser.phoneNumber,
-          updated_at: new Date().toISOString(),
+          school_name: updatedUser.school || 'School of Computing and Informatics',
+          programme_name: updatedUser.programme,
         })
         .eq('id', user.id);
-      if (error) return { error: error.message };
-
-      if (user.role === 'student') {
-        await supabase
-          .from('students')
-          .update({
-            school_name: updatedUser.school || 'School of Computing and Informatics',
-            programme_name: updatedUser.programme,
-          })
-          .eq('id', user.id);
-      }
-    } else {
-      const stored = getStoredDemoUsers();
-      const idx = stored.findIndex((u) => u.id === user.id);
-      if (idx !== -1) {
-        stored[idx] = { ...stored[idx], ...updatedUser };
-        saveStoredDemoUsers(stored);
-      }
-      localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(updatedUser));
     }
 
     setUser(updatedUser);
@@ -563,7 +425,6 @@ export function AuthProvider({ children }) {
         registerStudent,
         registerLecturer,
         login,
-        loginWithDemoProfile,
         logout,
         requestPasswordReset,
         updatePassword,

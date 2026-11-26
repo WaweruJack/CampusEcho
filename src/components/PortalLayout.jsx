@@ -18,7 +18,6 @@ import {
   Moon,
   GraduationCap,
   ShieldCheck,
-  Database,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -40,7 +39,7 @@ const ROUTE_TITLES = {
 };
 
 export default function PortalLayout() {
-  const { user, logout, isSupabaseConfigured } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { unreadCount, siteConfig } = useCampusData();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -212,22 +211,6 @@ export default function PortalLayout() {
 
       {/* Main Content */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {!isSupabaseConfigured && (
-          <div className="bg-indigo-950 text-indigo-100 border-b border-indigo-900 px-4 sm:px-6 py-2 text-xs flex flex-wrap items-center justify-between gap-2">
-            <span className="flex items-center gap-2">
-              <Database className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
-              <span>
-                Demonstration Mode: Displaying sample MUST campus data. Configure Supabase keys to connect your live database.
-              </span>
-            </span>
-            <Link
-              to="/dashboard/settings"
-              className="font-medium text-cyan-300 hover:text-white underline whitespace-nowrap"
-            >
-              Configure Backend
-            </Link>
-          </div>
-        )}
 
         {siteConfig?.bannerEnabled && siteConfig?.bannerText && (
           <div
